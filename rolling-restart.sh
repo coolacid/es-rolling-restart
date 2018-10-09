@@ -100,8 +100,9 @@ for NODE in ${NODES[@]}; do
 
     if [[ $PORT == *"|"* ]]; then
         # We have a custom command
-        export COMMAND=${PORT##*|}
-        export PORT=${PORT%%|*}
+        export NODE=${NODE%%|*}    # Keep everything before the |, Node
+        export COMMAND=${PORT##*|} # Keep everything after the | for command
+        export PORT=${PORT%%|*}    # Keep everything from PORT before | for PORT
     fi
 
     echo ">>>>>> Restarting ${NODE} at $(date)"
