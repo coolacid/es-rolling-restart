@@ -135,6 +135,15 @@ for NODE in ${NODES[@]}; do
         continue
     fi
 
+    echo ">>>>>> Preforming Synced Flush"
+    STATUS=`curl $INSECURE $PASS -XPOST -sS $MASTER/_flush/synced`
+
+#    if ! [[ "$STATUS" =~ (\"acknowledged\":true) ]] ; then
+#        echo "Failed acknowledge of allocation disable for ${NODE}"
+#        continue
+#    fi
+    echo $STATUS
+
     # Run the specified SHUTDOWN_SCRIPT to request shutdown of NODE.
 
     echo ">>>>>> Running shutdown script for ${NODE}"
