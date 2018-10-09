@@ -4,6 +4,7 @@
 echo "Running updates on $NODE"
 echo "Host: $HOST"
 echo "Port: $PORT"
+echo "Command: $COMMAND"
 # Whatever commands are required should go here.
 
 # Those commands should include starting the elasticsearch 

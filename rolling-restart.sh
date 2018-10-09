@@ -98,6 +98,12 @@ for NODE in ${NODES[@]}; do
     export HOST=${NODE%%:*}  # keep everything before the ':', hostname
     export PORT=${NODE##*:}  # keep everything after the ':', port number
 
+    if [[ $PORT == *"|"* ]]; then
+        # We have a custom command
+        export COMMAND=${PORT##*|}
+        export PORT=${PORT%%|*}
+    fi
+
     echo ">>>>>> Restarting ${NODE} at $(date)"
 
     STATUS=""
