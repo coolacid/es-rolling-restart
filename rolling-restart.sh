@@ -6,10 +6,15 @@
 #   -s SCRIPT - Script to run on each node to process the update. Script will have access to $MASTER and $NODE
 #   -d SHUTDOWN_SCRIPT - Script to run to stop elasticsearch node.
 
-while getopts ":d:m:n:s:hpi" opt; do
+USEHTTPS="http://"
+
+while getopts ":d:m:n:s:hpkl" opt; do
     case $opt in
-        i)
-            INSECURE=" -k "
+        k)
+            INSECURE=" -k"
+            ;;
+        l)
+            USEHTTPS="https://"
             ;;
         d)
             SHUTDOWN_SCRIPT=${OPTARG}
@@ -34,11 +39,11 @@ while getopts ":d:m:n:s:hpi" opt; do
             ;;
         p)
             echo "Please input elasticsearch username and password."
-            echo "Enter Username: "
+            echo -n "Enter Username: "
             read username
-            echo "Enter Password: "
-            read password
-            PASS='-u $username:$password '
+            echo -n "Enter Password: "
+            read -s password
+            PASS="-u $username:$password "
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -143,11 +148,11 @@ for NODE in ${NODES[@]}; do
 
     # wait for the node to stop
     echo ">>>>>> Waiting for node to stop."
-    STATUS=`curl $INSECURE $PASS -sS -XGET http://${NODE}/`
+    STATUS=`curl $INSECURE $PASS -sS -XGET $USEHTTPS${NODE}/`
     while [[ "$STATUS" =~ (\"status\" : 200) ]];
     do
-        STATUS=`curl $INSECURE $PASS -sS -XGET http://${NODE}/`
-
+        STATUS=`curl $INSECURE $PASS -sS -XGET $USEHTTPS${NODE}/`
+        curl $INSECURE $PASS -sS -XGET $USEHTTPS${NODE}/
         sleep 1
     done
 
@@ -174,8 +179,8 @@ for NODE in ${NODES[@]}; do
     STATUS=""
     while ! [[ "$STATUS" =~ (\"tagline\" : \"You Know, for Search\") ]];
     do
-        echo "fetching http://${NODE}/"
-        STATUS=`curl $INSECURE $PASS -sS -XGET http://${NODE}/`
+        echo "fetching $USEHTTPS${NODE}/"
+        STATUS=`curl $INSECURE $PASS -sS -XGET $USEHTTPS${NODE}/`
         sleep 1
     done
 
@@ -184,7 +189,7 @@ for NODE in ${NODES[@]}; do
     STATUS=""
     while [ -z "$STATUS" ];
     do
-        STATUS=`curl $INSECURE $PASS -sS -G http://${NODE}/_cat/health -d h=status | grep yellow`
+        STATUS=`curl $INSECURE $PASS -sS -G $USEHTTPS${NODE}/_cat/health -d h=status | grep yellow`
         sleep 1
     done
 
