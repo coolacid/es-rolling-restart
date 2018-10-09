@@ -6,8 +6,11 @@
 #   -s SCRIPT - Script to run on each node to process the update. Script will have access to $MASTER and $NODE
 #   -d SHUTDOWN_SCRIPT - Script to run to stop elasticsearch node.
 
-while getopts ":d:m:n:s:hp" opt; do
+while getopts ":d:m:n:s:hpi" opt; do
     case $opt in
+        i)
+            INSECURE=" -k "
+            ;;
         d)
             SHUTDOWN_SCRIPT=${OPTARG}
             echo "Shutdown script $SHUTDOWN_SCRIPT will be run for each node" >&2
@@ -112,7 +115,7 @@ for NODE in ${NODES[@]}; do
     while [ -z "$STATUS" ];
     do
         # verify cluster is green
-        STATUS=`curl $PASS -sS -G $MASTER/_cat/health -d h=status | grep green`
+        STATUS=`curl $INSECURE $PASS -sS -G $MASTER/_cat/health -d h=status | grep green`
         sleep 1
     done
 
@@ -120,7 +123,7 @@ for NODE in ${NODES[@]}; do
     # created primary shards
 
     echo ">>>>>> Disabling routing allocation"
-    STATUS=`curl $PASS -XPUT -sS $MASTER/_cluster/settings -d '{ "transient" : { "cluster.routing.allocation.enable" : "new_primaries" } }'`
+    STATUS=`curl $INSECURE $PASS -XPUT -sS $MASTER/_cluster/settings -d '{ "transient" : { "cluster.routing.allocation.enable" : "new_primaries" } }'`
 
     if ! [[ "$STATUS" =~ (\"acknowledged\":true) ]] ; then
         echo "Failed acknowledge of allocation disable for ${NODE}"
@@ -140,10 +143,10 @@ for NODE in ${NODES[@]}; do
 
     # wait for the node to stop
     echo ">>>>>> Waiting for node to stop."
-    STATUS=`curl $PASS -sS -XGET http://${NODE}/`
+    STATUS=`curl $INSECURE $PASS -sS -XGET http://${NODE}/`
     while [[ "$STATUS" =~ (\"status\" : 200) ]];
     do
-        STATUS=`curl $PASS -sS -XGET http://${NODE}/`
+        STATUS=`curl $INSECURE $PASS -sS -XGET http://${NODE}/`
 
         sleep 1
     done
@@ -153,7 +156,7 @@ for NODE in ${NODES[@]}; do
     STATUS=""
     while [ -z "$STATUS" ];
     do
-        STATUS=`curl $PASS -sS -G $MASTER/_cat/health -d h=status | grep yellow`
+        STATUS=`curl $INSECURE $PASS -sS -G $MASTER/_cat/health -d h=status | grep yellow`
         sleep 1
     done
 
@@ -172,7 +175,7 @@ for NODE in ${NODES[@]}; do
     while ! [[ "$STATUS" =~ (\"tagline\" : \"You Know, for Search\") ]];
     do
         echo "fetching http://${NODE}/"
-        STATUS=`curl $PASS -sS -XGET http://${NODE}/`
+        STATUS=`curl $INSECURE $PASS -sS -XGET http://${NODE}/`
         sleep 1
     done
 
@@ -181,7 +184,7 @@ for NODE in ${NODES[@]}; do
     STATUS=""
     while [ -z "$STATUS" ];
     do
-        STATUS=`curl $PASS -sS -G http://${NODE}/_cat/health -d h=status | grep yellow`
+        STATUS=`curl $INSECURE $PASS -sS -G http://${NODE}/_cat/health -d h=status | grep yellow`
         sleep 1
     done
 
@@ -197,7 +200,7 @@ for NODE in ${NODES[@]}; do
 
     echo ">>>>>> Re-enabling routing allocation"
     # re-enable routing allocation
-    STATUS=`curl $PASS -sS -XPUT ${MASTER}/_cluster/settings -d '{ "transient" : { "cluster.routing.allocation.enable" : "all" } }'`
+    STATUS=`curl $INSECURE $PASS -sS -XPUT ${MASTER}/_cluster/settings -d '{ "transient" : { "cluster.routing.allocation.enable" : "all" } }'`
 
     if ! [[ "$STATUS" =~ (\"acknowledged\":true) ]] ; then
         echo "Failed acknowledge of allocation enable for ${NODE}. Will try again."
@@ -207,7 +210,7 @@ for NODE in ${NODES[@]}; do
 
     echo ">>>>>> Re-enabling routing allocation one more time"
     # re-enable routing allocation
-    STATUS=`curl $PASS -sS -XPUT ${MASTER}/_cluster/settings -d '{ "transient" : { "cluster.routing.allocation.enable" : "all" } }'`
+    STATUS=`curl $INSECURE $PASS -sS -XPUT ${MASTER}/_cluster/settings -d '{ "transient" : { "cluster.routing.allocation.enable" : "all" } }'`
 
     if ! [[ "$STATUS" =~ (\"acknowledged\":true) ]] ; then
         echo "Failed acknowledge of allocation enable for ${NODE}. Continuing but manual intervention may be required."
@@ -221,11 +224,11 @@ for NODE in ${NODES[@]}; do
     while [ -z "$STATUS" ];
     do
         # verify cluster is green
-        STATUS=`curl $PASS -sS -G ${MASTER}/_cat/health -d h=status| grep green`
+        STATUS=`curl $INSECURE $PASS -sS -G ${MASTER}/_cat/health -d h=status| grep green`
         COUNT=$((COUNT + 1))
         if [ $COUNT -gt 60 ]  && [ $ITERATIONS -lt 5 ]; then
             echo ">>>>>> Still waiting. verifying routing allocation enabled."
-            UPDATE=`curl $PASS -sS -XPUT ${MASTER}/_cluster/settings -d '{ "transient" : { "cluster.routing.allocation.enable" : "all" } }'`
+            UPDATE=`curl $INSECURE $PASS -sS -XPUT ${MASTER}/_cluster/settings -d '{ "transient" : { "cluster.routing.allocation.enable" : "all" } }'`
 
             COUNT=0
             ITERATIONS=$((ITERATIONS + 1))
